@@ -68,20 +68,20 @@ sequenceDiagram
     participant DB as MySQL Database
 
     Note over Dashboard,DB: Initialization
-    Dashboard->>API: POST /toggle-shield (Set State)
-    API-->>Dashboard: State Synchronized
+    Dashboard ->> API: POST /toggle-shield (Set State)
+    API -->> Dashboard: State Synchronized
 
     Note over Dashboard,DB: Scenario A: Shield Inactive (Vulnerable)
-    Dashboard->>API: Malicious Request (SQLi / DoS / Wipeout)
-    API->>DB: Execute Raw/Unsafe Query
-    DB-->>API: Data Corrupted / Compromised
-    API-->>Dashboard: Attack Successful (UI Glitch)
+    Dashboard ->> API: Malicious Request (SQLi / DoS / Wipeout)
+    API ->> DB: Execute Raw/Unsafe Query
+    DB -->> API: Data Corrupted / Compromised
+    API -->> Dashboard: Attack Successful (UI Glitch)
 
     Note over Dashboard,DB: Scenario B: Shield Active (Protected)
-    Dashboard->>API: Malicious Request (SQLi / DoS / Wipeout)
-    API-->>API: Validate Input / Check Rate Limits
-    API-xDB: Database Execution Halted
-    API-->>Dashboard: Threat Blocked (Security Exception)
+    Dashboard ->> API: Malicious Request (SQLi / DoS / Wipeout)
+    Note right of API: Validate Input / Check Rate Limits
+    API --x DB: Database Execution Halted
+    API -->> Dashboard: Threat Blocked (Security Exception)
 ```
 
 ---
@@ -113,6 +113,18 @@ To evaluate the system's capabilities, follow this structured walkthrough:
 2. **Execute Attacks (Vulnerable State):** Initiate an attack by clicking any of the **Launch Attack** actions (e.g., Wipeout, SQL Injection, Duplication). Observe the resulting data corruption and the visual feedback (shaking/glitching animations).
 3. **Engage Defenses:** Press the hidden keybind `Alt + X`. This keystroke broadcasts a state-change request to both backends, instantly engaging the security protocols without requiring a page reload or visible UI toggle.
 4. **Verify Mitigations (Protected State):** Repeat the previously successful attacks. The backends will intercept the payloads, safely reject the requests, and the dashboard will display a "Threat Blocked" notification, confirming system integrity.
+
+---
+
+## Database Verification
+
+If you want to manually inspect the corrupted (or secured) records during the demonstration, you can shell directly into the running MySQL container:
+
+```bash
+# Access the MySQL CLI inside the container
+docker exec -it mysql-db mysql -u root -p
+```
+*(When prompted, enter the password defined in your `.env` file. Once inside, you can run `USE threat_visualizer;` followed by `SELECT * FROM user_data;` to view the raw records).*
 
 ---
 
