@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  mysql-db:
+    image: mysql:8
+    container_name: mysql-db
+    ports:
+      - "3307:3306"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - threat-net
+
+  backend-java:
+    build:
+      context: ./backend-java
+      dockerfile: Dockerfile
+    container_name: backend-java
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - threat-net
+
+  backend-go:
+    build:
+      context: ./backend-go
+      dockerfile: Dockerfile
+    container_name: backend-go
+    ports:
+      - "8081:8081"
+    env_file:
+      - .env
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - threat-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    # Nginx runs on 80 internally, so we map host's 3000 to container's 80
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend-java
+      - backend-go
+    networks:
+      - threat-net
+
+networks:
+  threat-net:
+    driver: bridge
