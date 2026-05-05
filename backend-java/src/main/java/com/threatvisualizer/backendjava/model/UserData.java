@@ -1,4 +1,4 @@
-package com.threatvisualizer.backendjava;
+package com.threatvisualizer.backendjava.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

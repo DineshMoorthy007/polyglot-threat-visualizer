@@ -1,4 +1,4 @@
-package com.threatvisualizer.backendjava;
+package com.threatvisualizer.backendjava.service;
 
 import org.springframework.stereotype.Service;
 

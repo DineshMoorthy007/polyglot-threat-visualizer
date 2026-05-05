@@ -1,5 +1,7 @@
-package com.threatvisualizer.backendjava;
+package com.threatvisualizer.backendjava.controller;
 
+import com.threatvisualizer.backendjava.service.DataProcessingService;
+import com.threatvisualizer.backendjava.service.ShieldStateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

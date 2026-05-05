@@ -1,5 +1,7 @@
-package com.threatvisualizer.backendjava;
+package com.threatvisualizer.backendjava.service;
 
+import com.threatvisualizer.backendjava.model.UserData;
+import com.threatvisualizer.backendjava.repository.SecureDataRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

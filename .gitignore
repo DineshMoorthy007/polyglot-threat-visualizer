@@ -1,0 +1,36 @@
+# IDE / OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Java / Maven (backend-java)
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+.mvn/wrapper/maven-wrapper.jar
+
+# Go (backend-go)
+backend-go/main
+backend-go/main.exe
+backend-go/vendor/
+*.go.tmp
+
+# Node / JS (Future frontend)
+node_modules/
+dist/
+build/
+.npm/
+
+# Logs
+*.log
