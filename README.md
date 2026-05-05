@@ -67,27 +67,21 @@ sequenceDiagram
     participant API as Backend Service (Java/Go)
     participant DB as MySQL Database
 
-    rect rgb(240, 240, 240)
-    note right of Dashboard: Initialization
+    Note over Dashboard,DB: Initialization
     Dashboard->>API: POST /toggle-shield (Set State)
     API-->>Dashboard: State Synchronized
-    end
 
-    rect rgb(255, 240, 240)
-    note right of Dashboard: Scenario A: Shield Inactive (Vulnerable)
+    Note over Dashboard,DB: Scenario A: Shield Inactive (Vulnerable)
     Dashboard->>API: Malicious Request (SQLi / DoS / Wipeout)
     API->>DB: Execute Raw/Unsafe Query
     DB-->>API: Data Corrupted / Compromised
     API-->>Dashboard: Attack Successful (UI Glitch)
-    end
 
-    rect rgb(240, 255, 240)
-    note right of Dashboard: Scenario B: Shield Active (Protected)
+    Note over Dashboard,DB: Scenario B: Shield Active (Protected)
     Dashboard->>API: Malicious Request (SQLi / DoS / Wipeout)
     API-->>API: Validate Input / Check Rate Limits
     API-xDB: Database Execution Halted
     API-->>Dashboard: Threat Blocked (Security Exception)
-    end
 ```
 
 ---
@@ -119,3 +113,11 @@ To evaluate the system's capabilities, follow this structured walkthrough:
 2. **Execute Attacks (Vulnerable State):** Initiate an attack by clicking any of the **Launch Attack** actions (e.g., Wipeout, SQL Injection, Duplication). Observe the resulting data corruption and the visual feedback (shaking/glitching animations).
 3. **Engage Defenses:** Press the hidden keybind `Alt + X`. This keystroke broadcasts a state-change request to both backends, instantly engaging the security protocols without requiring a page reload or visible UI toggle.
 4. **Verify Mitigations (Protected State):** Repeat the previously successful attacks. The backends will intercept the payloads, safely reject the requests, and the dashboard will display a "Threat Blocked" notification, confirming system integrity.
+
+---
+
+## Conclusion & Educational Value
+
+The **Polyglot Threat Visualizer** serves as a practical, hands-on tool for understanding the duality of application security. By contrasting vulnerable code execution with secure architectural patterns across multiple programming languages, it bridges the gap between theoretical security concepts and real-world engineering.
+
+*Built for demonstration, education, and architectural reference.*

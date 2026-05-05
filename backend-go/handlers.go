@@ -1,142 +1,98 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/time/rate"
 )
 
-var ShieldActive bool = false
-var idempotencyKeys sync.Map
-var limiter = rate.NewLimiter(rate.Every(1*time.Second), 5) // 5 requests per second
-
-type DataRequest struct {
-	Username string `json:"username"`
-	Data     string `json:"data"`
-}
+var (
+	isShieldActive  bool = false
+	idempotencyKeys sync.Map
+)
 
 func ToggleShield(c *gin.Context) {
-	ShieldActive = !ShieldActive
+	isShieldActive = !isShieldActive
 	status := "INACTIVE"
-	if ShieldActive {
+	if isShieldActive {
 		status = "ACTIVE"
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Shield is now " + status, "active": ShieldActive})
+	c.JSON(http.StatusOK, gin.H{"message": "Shield is now " + status, "active": isShieldActive})
 }
 
 func CreateData(c *gin.Context) {
-	var req DataRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	var reqData UserData
+	if err := c.ShouldBindJSON(&reqData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	if ShieldActive {
-		// SHIELD ON: Enforce rate limiting and Idempotency Key
-		if !limiter.Allow() {
-			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded. Try again later."})
+	if isShieldActive {
+		// Protected: Check Idempotency Key
+		idemKey := c.GetHeader("X-Idempotency-Key")
+		if idemKey == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "X-Idempotency-Key header is required"})
 			return
 		}
 
-		idempKey := c.GetHeader("Idempotency-Key")
-		if idempKey == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Idempotency-Key header is required when shield is active"})
+		if _, exists := idempotencyKeys.Load(idemKey); exists {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Duplicate request detected"})
 			return
 		}
-
-		if _, exists := idempotencyKeys.Load(idempKey); exists {
-			c.JSON(http.StatusConflict, gin.H{"error": "Duplicate request detected based on Idempotency-Key"})
-			return
-		}
-		idempotencyKeys.Store(idempKey, true)
-
-		// Secure Insert via GORM
-		newData := UserData{Username: req.Username, Data: req.Data}
-		if DB == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not initialized"})
-			return
-		}
-		if err := DB.Create(&newData).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
-			return
-		}
-		c.JSON(http.StatusCreated, gin.H{"message": "Data inserted securely", "data": newData})
-
-	} else {
-		// SHIELD OFF: Vulnerable to DoS (no limits) and Duplication (no idempotency check)
-		if SqlDB == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not initialized"})
-			return
-		}
-		// Raw SQL execution without rate limits
-		query := fmt.Sprintf("INSERT INTO user_data (username, data) VALUES ('%s', '%s')", req.Username, req.Data)
-		_, err := SqlDB.Exec(query)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
-			return
-		}
-		c.JSON(http.StatusCreated, gin.H{"message": "Data inserted vulnerable to DoS/Duplication"})
+		idempotencyKeys.Store(idemKey, true)
 	}
+
+	// Insert Data
+	if err := DB.Create(&reqData).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert data"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Data created successfully", "data": reqData})
 }
 
 func UpdateData(c *gin.Context) {
 	id := c.Param("id")
 
-	var req struct {
+	var reqData struct {
 		Data string `json:"data"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindJSON(&reqData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	if ShieldActive {
-		// SHIELD ON: Check Authorization (Mitigate IDOR)
-		authUsername := c.GetHeader("Authorization")
-		if authUsername == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required (username)"})
+	if isShieldActive {
+		// Protected: Check Authorization matches Username (Mitigate IDOR)
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			return
 		}
 
-		if DB == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not initialized"})
-			return
-		}
-
-		var existingData UserData
-		if err := DB.First(&existingData, id).Error; err != nil {
+		var existingRecord UserData
+		if err := DB.First(&existingRecord, id).Error; err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
 			return
 		}
 
-		// Ensure the logged-in user owns the record they are trying to update
-		if existingData.Username != authUsername {
+		if existingRecord.Username != authHeader {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied: You do not own this record"})
 			return
 		}
 
-		// Update securely via GORM
-		existingData.Data = req.Data
-		if err := DB.Save(&existingData).Error; err != nil {
+		existingRecord.Data = reqData.Data
+		if err := DB.Save(&existingRecord).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update record"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"message": "Record updated securely", "data": existingData})
+		c.JSON(http.StatusOK, gin.H{"message": "Record updated securely", "data": existingRecord})
 
 	} else {
-		// SHIELD OFF: IDOR Vulnerability - updates record purely based on URL parameter ID
-		if SqlDB == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database not initialized"})
-			return
-		}
-		query := fmt.Sprintf("UPDATE user_data SET data = '%s' WHERE id = %s", req.Data, id)
-		_, err := SqlDB.Exec(query)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
+		// Vulnerable: IDOR update directly without ownership check
+		if err := DB.Model(&UserData{}).Where("id = ?", id).Update("data", reqData.Data).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update record"})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "Record updated (Vulnerable to IDOR)"})

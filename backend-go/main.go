@@ -14,7 +14,7 @@ func main() {
 	api := r.Group("/api")
 	{
 		api.POST("/shield/toggle", ToggleShield)
-		
+
 		goApi := api.Group("/go")
 		{
 			goApi.POST("/data", CreateData)
@@ -22,8 +22,8 @@ func main() {
 		}
 	}
 
-	log.Println("Go Backend running on port 8081")
+	log.Println("Go Backend starting on port 8081...")
 	if err := r.Run(":8081"); err != nil {
-		log.Fatalf("Server failed: %v", err)
+		log.Fatalf("Failed to run server: %v", err)
 	}
 }

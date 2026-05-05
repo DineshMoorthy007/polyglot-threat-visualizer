@@ -1,7 +1,7 @@
 package main
 
 import (
-	"database/sql"
+	"fmt"
 	"log"
 	"os"
 
@@ -10,25 +10,42 @@ import (
 )
 
 var DB *gorm.DB
-var SqlDB *sql.DB
+
+// UserData model is now defined in models.go
 
 func ConnectDatabase() {
-	// Fallback to default if no environment variable is provided
-	dsn := os.Getenv("MYSQL_DSN")
-	if dsn == "" {
-		dsn = "root:password@tcp(127.0.0.1:3306)/threat_visualizer?charset=utf8mb4&parseTime=True&loc=Local"
+	user := os.Getenv("DB_USER")
+	if user == "" {
+		user = "root"
+	}
+	pass := os.Getenv("DB_PASSWORD")
+	if pass == "" {
+		pass = "password"
+	}
+	host := os.Getenv("DB_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	port := os.Getenv("DB_PORT")
+	if port == "" {
+		port = "3306"
+	}
+	name := os.Getenv("DB_NAME")
+	if name == "" {
+		name = "threat_visualizer"
 	}
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", user, pass, host, port, name)
+
+	var err error
+	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Printf("Failed to connect to database using GORM: %v. Please ensure MYSQL_DSN is set correctly.", err)
-	} else {
-		DB = db
-		sqlDB, err := db.DB()
-		if err != nil {
-			log.Fatalf("Failed to get raw db: %v", err)
-		}
-		SqlDB = sqlDB
-		log.Println("Successfully connected to the database!")
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	log.Println("Database connection established")
+
+	if err := DB.AutoMigrate(&UserData{}); err != nil {
+		log.Fatalf("Failed to auto-migrate database: %v", err)
 	}
 }
