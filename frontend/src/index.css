@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .vulnerable-row {
+    @apply transition-colors duration-300;
+  }
+  .vulnerable-row.glitching {
+    @apply animate-glitch bg-red-100 text-red-900 border-red-500 font-bold;
+  }
+  .vulnerable-row.shaking {
+    @apply animate-shake bg-red-100 text-red-900 border-red-500 font-bold;
+  }
+}
