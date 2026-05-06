@@ -68,7 +68,6 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend
-    # Nginx runs on 80 internally, so we map host's 3000 to container's 80
     ports:
       - "3000:80"
     depends_on:

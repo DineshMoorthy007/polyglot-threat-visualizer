@@ -34,14 +34,15 @@ graph TD
     end
     
     subgraph Data Layer
-        DB[(Shared MySQL Database<br>Port: 3307)]
+        JavaDB[(Java MySQL DB<br>Port: 3307)]
+        GoDB[(Go MySQL DB<br>Port: 3308)]
     end
 
-    Client -->|HTTP POST/PUT| JavaAPI
-    Client -->|HTTP POST/PUT| GoAPI
+    Client -->|HTTP POST/GET/DELETE| JavaAPI
+    Client -->|HTTP POST/PUT/GET/DELETE| GoAPI
 
-    JavaAPI <-->|JDBC / Hibernate| DB
-    GoAPI <-->|database/sql / GORM| DB
+    JavaAPI <-->|JDBC / Hibernate| JavaDB
+    GoAPI <-->|database/sql / GORM| GoDB
 ```
 
 ---
@@ -101,7 +102,7 @@ cd polyglot-threat-visualizer
 docker compose up --build -d
 ```
 
-*Note: The MySQL container exposes port `3307` to the host machine to prevent conflicts with pre-existing local database instances.*
+*Note: The two MySQL containers expose ports `3307` (Java) and `3308` (Go) to the host machine to prevent conflicts with pre-existing local database instances. Robust health checks guarantee that backends only spin up once their respective databases are fully initialized.*
 
 ---
 
@@ -110,21 +111,25 @@ docker compose up --build -d
 To evaluate the system's capabilities, follow this structured walkthrough:
 
 1. **Access the Interface:** Navigate to `http://localhost:3000` to load the Threat Visualizer dashboard.
-2. **Execute Attacks (Vulnerable State):** Initiate an attack by clicking any of the **Launch Attack** actions (e.g., Wipeout, SQL Injection, Duplication). Observe the resulting data corruption and the visual feedback (shaking/glitching animations).
-3. **Engage Defenses:** Press the hidden keybind `Alt + X`. This keystroke broadcasts a state-change request to both backends, instantly engaging the security protocols without requiring a page reload or visible UI toggle.
-4. **Verify Mitigations (Protected State):** Repeat the previously successful attacks. The backends will intercept the payloads, safely reject the requests, and the dashboard will display a "Threat Blocked" notification, confirming system integrity.
+2. **Manage Data:** Utilize the **Add Data** and **Clear Data** utility buttons under each table to populate or wipe the independent databases cleanly via safe ORM/GORM methods.
+3. **Execute Attacks (Vulnerable State):** Initiate an attack by clicking any of the **Launch Attack** actions. The dashboard automatically injects randomized, dynamic payloads resulting in live data defacement, mass duplication bursts, or IDOR corruption. Observe the resulting data corruption and visual feedback (shaking/glitching animations) updating in real-time.
+4. **Engage Defenses:** Press the hidden keybind `Alt + X`. This keystroke broadcasts a state-change request to both backends, instantly engaging the security protocols.
+5. **Verify Mitigations (Protected State):** Repeat the previously successful attacks. The backends will intercept the payloads, safely reject the requests (throwing `SecurityException`s or `403`s), and the dashboard will display a "Threat Blocked" notification, confirming system integrity without executing raw SQL.
 
 ---
 
 ## Database Verification
 
-If you want to manually inspect the corrupted (or secured) records during the demonstration, you can shell directly into the running MySQL container:
+If you want to manually inspect the corrupted (or secured) records during the demonstration, you can shell directly into the running MySQL containers:
 
 ```bash
-# Access the MySQL CLI inside the container
-docker exec -it mysql-db mysql -u root -p
+# Access the Java MySQL CLI
+docker exec -it mysql-java mysql -u root -p
+
+# Access the Go MySQL CLI
+docker exec -it mysql-go mysql -u root -p
 ```
-*(When prompted, enter the password defined in your `.env` file. Once inside, you can run `USE threat_visualizer;` followed by `SELECT * FROM user_data;` to view the raw records).*
+*(When prompted, enter the password defined in your `.env` file (`JAVA_DB_PASSWORD` or `GO_DB_PASSWORD`). Once inside, you can run `USE java_threat_db;` or `USE go_threat_db;` followed by `SELECT * FROM user_data;` to view the raw records).*
 
 ---
 
