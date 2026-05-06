@@ -14,23 +14,23 @@ var DB *gorm.DB
 // UserData model is now defined in models.go
 
 func ConnectDatabase() {
-	user := os.Getenv("DB_USER")
+	user := os.Getenv("GO_DB_USER")
 	if user == "" {
 		user = "root"
 	}
-	pass := os.Getenv("DB_PASSWORD")
+	pass := os.Getenv("GO_DB_PASSWORD")
 	if pass == "" {
 		pass = "password"
 	}
-	host := os.Getenv("DB_HOST")
+	host := os.Getenv("GO_DB_HOST")
 	if host == "" {
 		host = "localhost"
 	}
-	port := os.Getenv("DB_PORT")
+	port := os.Getenv("GO_DB_PORT")
 	if port == "" {
 		port = "3306"
 	}
-	name := os.Getenv("DB_NAME")
+	name := os.Getenv("GO_DB_NAME")
 	if name == "" {
 		name = "threat_visualizer"
 	}

@@ -1,11 +1,29 @@
 services:
-  mysql-db:
+  mysql-java:
     image: mysql:8
-    container_name: mysql-db
+    container_name: mysql-java
     ports:
       - "3307:3306"
-    env_file:
-      - .env
+    environment:
+      MYSQL_DATABASE: ${JAVA_DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${JAVA_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - threat-net
+
+  mysql-go:
+    image: mysql:8
+    container_name: mysql-go
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_DATABASE: ${GO_DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${GO_DB_PASSWORD}
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -25,7 +43,7 @@ services:
     env_file:
       - .env
     depends_on:
-      mysql-db:
+      mysql-java:
         condition: service_healthy
     networks:
       - threat-net
@@ -40,7 +58,7 @@ services:
     env_file:
       - .env
     depends_on:
-      mysql-db:
+      mysql-go:
         condition: service_healthy
     networks:
       - threat-net
