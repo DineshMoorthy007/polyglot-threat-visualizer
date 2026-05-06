@@ -17,8 +17,11 @@ func main() {
 
 		goApi := api.Group("/go")
 		{
+			goApi.GET("/data", GetAllData)
 			goApi.POST("/data", CreateData)
 			goApi.PUT("/data/:id", UpdateData)
+			goApi.POST("/data/seed", SeedData)
+			goApi.DELETE("/data/clear", ClearData)
 		}
 	}
 

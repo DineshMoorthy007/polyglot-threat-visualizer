@@ -7,6 +7,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.UUID;
+
 @Service
 public class DataProcessingService {
 
@@ -39,5 +42,23 @@ public class DataProcessingService {
             String sql = "INSERT INTO user_data (username, data) VALUES ('" + username + "', '" + userInput + "')";
             jdbcTemplate.execute(sql);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserData> getAllData() {
+        return secureDataRepository.findAll();
+    }
+
+    @Transactional
+    public UserData seedData() {
+        UserData userData = new UserData();
+        userData.setUsername("TestUser_" + UUID.randomUUID().toString().substring(0, 8));
+        userData.setData("System secure");
+        return secureDataRepository.save(userData);
+    }
+
+    @Transactional
+    public void clearAllData() {
+        secureDataRepository.deleteAll();
     }
 }

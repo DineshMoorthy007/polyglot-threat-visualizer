@@ -1,10 +1,13 @@
 package com.threatvisualizer.backendjava.controller;
 
+import com.threatvisualizer.backendjava.model.UserData;
 import com.threatvisualizer.backendjava.service.DataProcessingService;
 import com.threatvisualizer.backendjava.service.ShieldStateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -42,5 +45,21 @@ public class VulnerableController {
     public ResponseEntity<String> toggleShield() {
         shieldStateService.toggleShield();
         return ResponseEntity.ok("Shield is now " + (shieldStateService.isActive() ? "ACTIVE" : "INACTIVE"));
+    }
+
+    @GetMapping("/java/data")
+    public ResponseEntity<List<UserData>> getAllData() {
+        return ResponseEntity.ok(dataProcessingService.getAllData());
+    }
+
+    @PostMapping("/java/data/seed")
+    public ResponseEntity<UserData> seedData() {
+        return ResponseEntity.ok(dataProcessingService.seedData());
+    }
+
+    @DeleteMapping("/java/data/clear")
+    public ResponseEntity<String> clearData() {
+        dataProcessingService.clearAllData();
+        return ResponseEntity.ok("All records cleared successfully.");
     }
 }

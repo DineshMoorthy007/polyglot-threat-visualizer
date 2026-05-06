@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -97,4 +99,33 @@ func UpdateData(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "Record updated (Vulnerable to IDOR)"})
 	}
+}
+
+func GetAllData(c *gin.Context) {
+	var records []UserData
+	if err := DB.Find(&records).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch data"})
+		return
+	}
+	c.JSON(http.StatusOK, records)
+}
+
+func SeedData(c *gin.Context) {
+	dummyUser := UserData{
+		Username: fmt.Sprintf("TestUser_%d", time.Now().UnixNano()),
+		Data:     "System secure (Go)",
+	}
+	if err := DB.Create(&dummyUser).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to seed data"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Seed data created successfully", "data": dummyUser})
+}
+
+func ClearData(c *gin.Context) {
+	if err := DB.Unscoped().Where("1 = 1").Delete(&UserData{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear data"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "All records cleared successfully."})
 }
