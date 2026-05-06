@@ -32,14 +32,12 @@ public class DataProcessingService {
     }
 
     @Transactional
-    public void insertUserData(String username, String userInput) {
+    public void executeSqliAttack() {
         if (shieldStateService.isActive()) {
-            UserData userData = new UserData();
-            userData.setUsername(username);
-            userData.setData(userInput);
-            secureDataRepository.save(userData);
+            throw new SecurityException("SQL Injection attack is blocked by the shield.");
         } else {
-            String sql = "INSERT INTO user_data (username, data) VALUES ('" + username + "', '" + userInput + "')";
+            String randomPwned = "PWNED_" + (int)(Math.random() * 9000 + 1000);
+            String sql = "UPDATE user_data SET username = '" + randomPwned + "'";
             jdbcTemplate.execute(sql);
         }
     }

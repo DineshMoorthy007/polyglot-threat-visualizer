@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,6 +11,7 @@ func main() {
 	ConnectDatabase()
 
 	r := gin.Default()
+	r.Use(cors.Default())
 
 	api := r.Group("/api")
 	{

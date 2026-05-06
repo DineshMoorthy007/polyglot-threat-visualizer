@@ -8,19 +8,25 @@ function App() {
   const [relationalGlitch, setRelationalGlitch] = useState(false);
   const [goGlitch, setGoGlitch] = useState(false);
 
-  // Mock data to simulate tables
-  const initialRelational = [
-    { id: 1, username: 'admin', data: 'Super Secret Setup Data' },
-    { id: 2, username: 'user1', data: 'Hello World! Welcome' },
-  ];
-  
-  const initialGoData = [
-    { id: 3, username: 'go_admin', data: 'System logs initialized' },
-    { id: 4, username: 'go_user', data: 'Cache warming complete' },
-  ];
+  const [javaData, setJavaData] = useState<any[]>([]);
+  const [goData, setGoData] = useState<any[]>([]);
 
-  const [relationalData] = useState(initialRelational);
-  const [goData] = useState(initialGoData);
+  const fetchData = useCallback(async () => {
+    try {
+      const [javaRes, goRes] = await Promise.all([
+        fetch('http://localhost:8080/api/java/data'),
+        fetch('http://localhost:8081/api/go/data')
+      ]);
+      if (javaRes.ok) setJavaData(await javaRes.json());
+      if (goRes.ok) setGoData(await goRes.json());
+    } catch (error) {
+      console.error('Failed to fetch data', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const addToast = useCallback((message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -53,21 +59,57 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isShieldActive]);
 
-  const triggerAttack = (target: 'relational' | 'go', attackName: string) => {
-    if (isShieldActive) {
-      addToast(`Threat Blocked: ${attackName} intercepted by Shield.`, 'success');
-      return;
-    }
-
-    // Shield is OFF - Vulnerable!
-    addToast(`System Compromised: ${attackName} successful!`, 'error');
-    
-    if (target === 'relational') {
-      setRelationalGlitch(true);
-      setTimeout(() => setRelationalGlitch(false), 2000);
-    } else {
-      setGoGlitch(true);
-      setTimeout(() => setGoGlitch(false), 2000);
+  const triggerAttack = async (target: 'relational' | 'go', attackName: string) => {
+    try {
+      if (target === 'relational') {
+        if (attackName === 'Wipeout (TRUNCATE)') {
+          await fetch('http://localhost:8080/api/purge', { method: 'POST' });
+        } else if (attackName === 'SQL Injection') {
+          await fetch('http://localhost:8080/api/insert', { method: 'POST' });
+        }
+        setRelationalGlitch(true);
+        setTimeout(() => setRelationalGlitch(false), 2000);
+      } else {
+        if (attackName === 'Rapid Duplication (DoS)') {
+          const numDuplicates = Math.floor(Math.random() * 3) + 3; // 3 to 5 duplicates
+          const promises = [];
+          for (let i = 0; i < numDuplicates; i++) {
+            promises.push(
+              fetch('http://localhost:8081/api/go/data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  username: 'Bot_' + Math.floor(Math.random() * 10000), 
+                  data: 'DDoS_Spam_' + i 
+                })
+              })
+            );
+          }
+          await Promise.all(promises);
+        } else if (attackName === 'IDOR Alteration') {
+          if (goData.length > 0) {
+            const randomRecord = goData[Math.floor(Math.random() * goData.length)];
+            await fetch(`http://localhost:8081/api/go/data/${randomRecord.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ data: 'CORRUPTED_' + Math.floor(Math.random() * 1000) })
+            });
+          } else {
+             console.warn("No Go data available to alter.");
+          }
+        }
+        setGoGlitch(true);
+        setTimeout(() => setGoGlitch(false), 2000);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (isShieldActive) {
+        addToast(`Threat Blocked: ${attackName} intercepted by Shield.`, 'success');
+      } else {
+        addToast(`System Compromised: ${attackName} successful!`, 'error');
+      }
+      fetchData();
     }
   };
 
@@ -108,7 +150,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {relationalData.map((row) => (
+                  {javaData.map((row) => (
                     <tr key={row.id} className={`vulnerable-row ${relationalGlitch ? 'glitching' : ''}`}>
                       <td className="px-4 py-3 font-medium text-slate-500">{row.id}</td>
                       <td className="px-4 py-3 font-medium text-indigo-900">{row.username}</td>
@@ -120,19 +162,35 @@ function App() {
             </div>
           </div>
 
-          <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-3">
-            <button 
-              onClick={() => triggerAttack('relational', 'Wipeout (TRUNCATE)')}
-              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all hover:shadow focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
-            >
-              Launch Wipeout
-            </button>
-            <button 
-              onClick={() => triggerAttack('relational', 'SQL Injection')}
-              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all hover:shadow focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
-            >
-              Launch SQLi
-            </button>
+          <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex flex-wrap justify-between items-center gap-3">
+            <div className="flex gap-3">
+              <button 
+                onClick={() => triggerAttack('relational', 'Wipeout (TRUNCATE)')}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all hover:shadow focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
+              >
+                Launch Wipeout
+              </button>
+              <button 
+                onClick={() => triggerAttack('relational', 'SQL Injection')}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all hover:shadow focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
+              >
+                Launch SQLi
+              </button>
+            </div>
+            <div className="flex gap-3">
+              <button 
+                onClick={async () => { await fetch('http://localhost:8080/api/java/data/seed', { method: 'POST' }); fetchData(); }}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-medium rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-slate-400"
+              >
+                Add Data
+              </button>
+              <button 
+                onClick={async () => { await fetch('http://localhost:8080/api/java/data/clear', { method: 'DELETE' }); fetchData(); }}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-medium rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-slate-400"
+              >
+                Clear Data
+              </button>
+            </div>
           </div>
         </section>
 
@@ -166,19 +224,35 @@ function App() {
             </div>
           </div>
 
-          <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-3">
-            <button 
-              onClick={() => triggerAttack('go', 'Rapid Duplication (DoS)')}
-              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all hover:shadow focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
-            >
-              Launch Duplication
-            </button>
-            <button 
-              onClick={() => triggerAttack('go', 'IDOR Alteration')}
-              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all hover:shadow focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
-            >
-              Launch Alteration
-            </button>
+          <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex flex-wrap justify-between items-center gap-3">
+            <div className="flex gap-3">
+              <button 
+                onClick={() => triggerAttack('go', 'Rapid Duplication (DoS)')}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all hover:shadow focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+              >
+                Launch Duplication
+              </button>
+              <button 
+                onClick={() => triggerAttack('go', 'IDOR Alteration')}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all hover:shadow focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+              >
+                Launch Alteration
+              </button>
+            </div>
+            <div className="flex gap-3">
+              <button 
+                onClick={async () => { await fetch('http://localhost:8081/api/go/data/seed', { method: 'POST' }); fetchData(); }}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-medium rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-slate-400"
+              >
+                Add Data
+              </button>
+              <button 
+                onClick={async () => { await fetch('http://localhost:8081/api/go/data/clear', { method: 'DELETE' }); fetchData(); }}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-medium rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-slate-400"
+              >
+                Clear Data
+              </button>
+            </div>
           </div>
         </section>
 

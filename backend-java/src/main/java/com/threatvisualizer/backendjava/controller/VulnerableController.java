@@ -11,6 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "http://localhost:3000")
 public class VulnerableController {
 
     @Autowired
@@ -32,10 +33,12 @@ public class VulnerableController {
     }
 
     @PostMapping("/insert")
-    public ResponseEntity<String> insert(@RequestParam String username, @RequestParam String data) {
+    public ResponseEntity<String> executeSqli() {
         try {
-            dataProcessingService.insertUserData(username, data);
-            return ResponseEntity.ok("Data inserted successfully.");
+            dataProcessingService.executeSqliAttack();
+            return ResponseEntity.ok("Mass data scrambled (SQLi) successfully.");
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body("Security Block: " + e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
